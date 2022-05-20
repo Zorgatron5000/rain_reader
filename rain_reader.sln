@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32516.85
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rain_reader", "rain_reader\rain_reader.csproj", "{89943964-C2EE-4E5D-8289-FEF983E48CB5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {440D5EE5-8B71-4792-B29E-8D3ED0FF7761}
+	EndGlobalSection
+EndGlobal
