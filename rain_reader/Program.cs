@@ -35,9 +35,9 @@ Gauges.Columns.Add("Device Name", typeof(string));
 Gauges.Columns.Add("Location", typeof(string));
 
 var GaugeReadings = new DataTable();
-GaugeReadings.Columns.Add("Device Id", typeof(Int32));
+GaugeReadings.Columns.Add("Device ID", typeof(Int32));
 GaugeReadings.Columns.Add("Time", typeof(DateTime));
-GaugeReadings.Columns.Add("Rainfall", typeof(Int32));
+GaugeReadings.Columns.Add("Rainfall", typeof(Double));
 
 //load the gauge info
 using (var reader = new StreamReader(FolderLocation + "\\Devices.csv"))
@@ -76,7 +76,7 @@ foreach (var myFile in files)
 
 //let's just check we have useful data on the screen
 
-///*  Checking data is actually in the tables debug only
+/*  Checking data is actually in the tables debug only
 
 foreach (DataRow dataRow in Gauges.Rows)
 {
@@ -88,15 +88,10 @@ foreach (DataRow dataRow in Gauges.Rows)
 }
 
 
-foreach (DataRow dataRow in GaugeReadings.Rows)
-{
-    foreach (var item in dataRow.ItemArray)
-    {
-        Console.Write("{0}, ", item);
-    }
-    Console.WriteLine();
-}
 //*/
+dump_results("Gauges", Gauges.Rows);
+
+dump_results("Gauge Readings", GaugeReadings.Rows);
 
 //time to join the tables and get some results
 
@@ -104,8 +99,24 @@ foreach (DataRow dataRow in GaugeReadings.Rows)
 //pinched this code from https://stackoverflow.com/questions/665754/inner-join-of-datatables-in-c-sharp to reduce pain
 
 
-/*
-private DataTable JoinDataTables(DataTable t1, DataTable t2, params Func<DataRow, DataRow, bool>[] joinOn)
+///*
+///
+void dump_results(string title, DataRowCollection show_results)
+{
+    Console.WriteLine(title);
+    Console.WriteLine();
+
+    foreach (DataRow dataRow in show_results)
+    {
+        foreach (var item in dataRow.ItemArray)
+        {
+            Console.Write("{0}, ", item);
+        }
+        Console.WriteLine();
+    }
+}
+
+DataTable JoinDataTables(DataTable t1, DataTable t2, params Func<DataRow, DataRow, bool>[] joinOn)
 {
     DataTable result = new DataTable();
     foreach (DataColumn col in t1.Columns)
@@ -148,10 +159,64 @@ private DataTable JoinDataTables(DataTable t1, DataTable t2, params Func<DataRow
 
 var test = JoinDataTables(Gauges, GaugeReadings,
                (row1, row2) =>
-               row1.Field<int32>("Device ID") == row2.Field<int32>("Device ID"));
+               row1.Field<Int32>("Device ID") == row2.Field<Int32>("Device ID"));
+
+
+//get the latest timestamp
+
+DateTime last_reading_time;
+Double rainfall_average;
+Boolean rainfall_increasing;
+Object calc_object; 
+
+last_reading_time = Convert.ToDateTime(GaugeReadings.Compute("max([Time])", string.Empty));
+
+//changed my mind on calcs. Just going to bash it out with excessive force.
+
+foreach (DataRow gauge in Gauges.Rows)
+{
+    //enumerate name
+    var id = gauge["Device ID"].ToString();
+
+    Console.ForegroundColor = ConsoleColor.White;
+    Console.Write($"#{id}({gauge["Location"]}) ");
+
+    //calc average and make the colour changes as required.
+
+    calc_object = GaugeReadings.Compute("AVG([Rainfall])", $"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(-4)}#)").ToString();
+
+    if (calc_object == "")
+        rainfall_average = 0;
+    else
+        //this is bonkers but I haven't done type conversion for decades, so what do I know
+        rainfall_average = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);
+
+    if (rainfall_average < 10.0)
+        Console.ForegroundColor = ConsoleColor.Green;
+    else if (rainfall_average < 15.0)
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+    else
+        Console.ForegroundColor = ConsoleColor.Red;
+    
+    //need to include a check for the >30mm outlier
+
+    Console.Write(rainfall_average.ToString("F2"));
+
+//indicate increase/decrease
+
+//clean up the line
+Console.ResetColor();
+Console.WriteLine();
+
+
+}
 
 
 
-*/
+Console.WriteLine(last_reading_time);
+
+
+
+
 
 
