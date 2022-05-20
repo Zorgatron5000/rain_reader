@@ -5,6 +5,8 @@ VisualStudioVersion = 17.2.32516.85
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rain_reader", "rain_reader\rain_reader.csproj", "{89943964-C2EE-4E5D-8289-FEF983E48CB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rain_readerTests", "rain_readerTests\rain_readerTests.csproj", "{AF74E0A3-5CA0-499A-964F-79E63150E3D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89943964-C2EE-4E5D-8289-FEF983E48CB5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF74E0A3-5CA0-499A-964F-79E63150E3D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF74E0A3-5CA0-499A-964F-79E63150E3D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF74E0A3-5CA0-499A-964F-79E63150E3D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF74E0A3-5CA0-499A-964F-79E63150E3D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
