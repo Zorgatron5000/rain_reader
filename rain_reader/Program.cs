@@ -19,7 +19,7 @@ if (args.Length == 0)
 }
 else
 {
-    FolderLocation = args[1];
+    FolderLocation = args[0];
     if (!Directory.Exists(FolderLocation))
     {
         Console.WriteLine("Specified folder does not exist: {0}", FolderLocation);
@@ -40,7 +40,7 @@ GaugeReadings.Columns.Add("Time", typeof(DateTime));
 GaugeReadings.Columns.Add("Rainfall", typeof(int));
 
 //load the gauge info
-using (var reader = new StreamReader(FolderLocation + "Devices.csv"))
+using (var reader = new StreamReader(FolderLocation + "\\Devices.csv"))
 
 using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
 {

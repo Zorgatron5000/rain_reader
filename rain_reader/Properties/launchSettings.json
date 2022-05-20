@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "rain_reader": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\Zorgatron\\source\\repos\\rain_reader\\data"
+    }
+  }
+}
