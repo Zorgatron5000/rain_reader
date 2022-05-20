@@ -1,5 +1,8 @@
 Assumptions and implications for the Rain Reader
 
+usage: rain_reader.exe <path to data files>
+
+
 Devices.csv
 - manually generated list of devices doing reporting
 - couple of errors in the data have been cleaned up

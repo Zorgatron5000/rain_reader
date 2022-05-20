@@ -76,9 +76,6 @@ foreach (var myFile in files)
 
 //let's just check we have useful data on the screen
 
-
-
-
 ///*  Checking data is actually in the tables debug only
 
 foreach (DataRow dataRow in Gauges.Rows)
