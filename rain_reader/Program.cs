@@ -55,13 +55,14 @@ else
 
 //files exist and we know where they are, let's import the information
 
-//build the data structures prior ot import
+//build the data structures prior to import
 Gauges = new DataTable();
 Gauges.Columns.Add("Device ID", typeof(Int32));
 Gauges.Columns.Add("Device Name", typeof(string));
 Gauges.Columns.Add("Location", typeof(string));
 
 GaugeReadings = new DataTable();
+GaugeReadings.TableName = "Readings";
 GaugeReadings.Columns.Add("Device ID", typeof(Int32));
 GaugeReadings.Columns.Add("Time", typeof(DateTime));
 GaugeReadings.Columns.Add("Rainfall", typeof(Double));
@@ -96,30 +97,32 @@ OutputToScreen("Gauge Readings", GaugeReadings.Rows);
 //get the latest timestamp and write it to screen
 last_reading_time = Convert.ToDateTime(GaugeReadings.Compute("max([Time])", string.Empty));
 Console.WriteLine($"Last reading received at: {last_reading_time}");
+Console.WriteLine($"Cut off time: {last_reading_time.AddHours(TIME_PERIOD_HOURS)}");
 Console.WriteLine();
 
 //now process the Gauges
 
 foreach (DataRow g in Gauges.Rows)
 {
-    Object calc_object;
+    object calc_object;
     DataRow[] select_results;
     string id;
+    string filter_string;
 
-     //enumerate name
+     //get some filtering sorted out
     id = g["Device ID"].ToString();
+    filter_string = $"(([Device ID] = {id})) and ([Time] > #{last_reading_time.AddHours(TIME_PERIOD_HOURS).AddMinutes(-1).ToString("yyyy/MM/dd HH:mm:ss")}#)";
 
     Console.ForegroundColor = ConsoleColor.White;
-    Console.Write($"{g["Location"]} (#{id})".PadRight(PADDING_LABEL));
-
+    Console.Write($"(#{id}) {g["Location"]}".PadRight(PADDING_LABEL));
 
     //calc average and make the colour changes as required.
-    calc_object = GaugeReadings.Compute("AVG([Rainfall])", $"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(TIME_PERIOD_HOURS)}#)").ToString();
+    calc_object = GaugeReadings.Compute("AVG([Rainfall])", filter_string).ToString();
 
-    if (calc_object == "")
-        rainfall_average = 0;
-    else
+    if ((calc_object != null) && (calc_object != ""))
         rainfall_average = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);  //this is bonkers but I haven't done forced type conversion for decades, so what do I know
+    else
+        rainfall_average = 0;
 
     if (rainfall_average < 10.0)
         Console.ForegroundColor = ConsoleColor.Green;
@@ -129,11 +132,11 @@ foreach (DataRow g in Gauges.Rows)
         Console.ForegroundColor = ConsoleColor.Red;
 
     //need to include a check for the >30mm outlier
-    calc_object = GaugeReadings.Compute("MAX([Rainfall])", $"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(TIME_PERIOD_HOURS)}#)").ToString();
-    if (calc_object == "")
-        rainfall_max = 0;
-    else
+    calc_object = GaugeReadings.Compute("MAX([Rainfall])", filter_string).ToString();
+    if ((calc_object != null) && (calc_object != ""))
         rainfall_max = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);      //this is bonkers but I haven't done forced type conversion for decades, so what do I know
+    else
+        rainfall_max = 0;
 
     if (rainfall_max > 30.0)
         Console.ForegroundColor = ConsoleColor.Red;
@@ -142,7 +145,7 @@ foreach (DataRow g in Gauges.Rows)
 
 
     //indicate increase/decrease (Compare Last reading to average value)
-    select_results = GaugeReadings.Select($"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(TIME_PERIOD_HOURS)}#)", "[Time] DESC");
+    select_results = GaugeReadings.Select(filter_string, "[Time] DESC");
     if (select_results.Length == 0)
         rainfall_latest = 0;
         //there also won't be an average if there are no results in this time period. 
