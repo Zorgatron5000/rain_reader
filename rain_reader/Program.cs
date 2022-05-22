@@ -11,10 +11,11 @@ string FolderLocation;
 
 FolderLocation = ""; //because compilers are silly now
 
-//grab the location of the datafiles from the first args value, check its valid or exit and say why.
+//grab the location of the datafiles from the first args value, check it
+//s valid or exit and say why.
 if (args.Length == 0)
 {
-    Console.WriteLine("Please specifiy the path to the datafiles in the first argument");
+    Console.WriteLine("Please specifiy the path to the data files in the first argument");
     Environment.Exit(1);
 }
 else
@@ -22,12 +23,12 @@ else
     FolderLocation = args[0];
     if (!Directory.Exists(FolderLocation))
     {
-        Console.WriteLine("Specified folder does not exist: {0}", FolderLocation);
+        Console.WriteLine($"Specified folder does not exist: {FolderLocation}");
         Environment.Exit(1);
     }
 }
 
-//build the data structures
+//build the data structures for import
 
 var Gauges = new DataTable();
 Gauges.Columns.Add("Device ID", typeof(Int32));
@@ -39,7 +40,7 @@ GaugeReadings.Columns.Add("Device ID", typeof(Int32));
 GaugeReadings.Columns.Add("Time", typeof(DateTime));
 GaugeReadings.Columns.Add("Rainfall", typeof(Double));
 
-//load the gauge info
+//load the Gauge info
 using (var reader = new StreamReader(FolderLocation + "\\Devices.csv"))
 
 using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
@@ -51,8 +52,6 @@ using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
         //this is such a cheat, should add some kind of error checking
         //need to filter out error values like blank lines. although current docs indicate that this is supposed to be the case but quick testing of loading the files indicates otherwise.
         //will need to check CsvHelper version specs against documentation. in the meantime I have removed the blank line in the Devices.txt file to skip the error condition.
-
-
     }
 }
 
@@ -74,33 +73,12 @@ foreach (var myFile in files)
     }
 }
 
-//let's just check we have useful data on the screen
 
-/*  Checking data is actually in the tables debug only
+/*  Checking data is actually in the tables debug only 
 
-foreach (DataRow dataRow in Gauges.Rows)
-{
-    foreach (var item in dataRow.ItemArray)
-    {
-        Console.Write("{0}, ", item);
-    }
-    Console.WriteLine();
-}
-
-
-//*/
 dump_results("Gauges", Gauges.Rows);
-
 dump_results("Gauge Readings", GaugeReadings.Rows);
 
-//time to join the tables and get some results
-
-
-//pinched this code from https://stackoverflow.com/questions/665754/inner-join-of-datatables-in-c-sharp to reduce pain
-
-
-///*
-///
 void dump_results(string title, DataRowCollection show_results)
 {
     Console.WriteLine(title);
@@ -116,59 +94,20 @@ void dump_results(string title, DataRowCollection show_results)
     }
 }
 
-DataTable JoinDataTables(DataTable t1, DataTable t2, params Func<DataRow, DataRow, bool>[] joinOn)
-{
-    DataTable result = new DataTable();
-    foreach (DataColumn col in t1.Columns)
-    {
-        if (result.Columns[col.ColumnName] == null)
-            result.Columns.Add(col.ColumnName, col.DataType);
-    }
-    foreach (DataColumn col in t2.Columns)
-    {
-        if (result.Columns[col.ColumnName] == null)
-            result.Columns.Add(col.ColumnName, col.DataType);
-    }
-    foreach (DataRow row1 in t1.Rows)
-    {
-        var joinRows = t2.AsEnumerable().Where(row2 =>
-        {
-            foreach (var parameter in joinOn)
-            {
-                if (!parameter(row1, row2)) return false;
-            }
-            return true;
-        });
-        foreach (DataRow fromRow in joinRows)
-        {
-            DataRow insertRow = result.NewRow();
-            foreach (DataColumn col1 in t1.Columns)
-            {
-                insertRow[col1.ColumnName] = row1[col1.ColumnName];
-            }
-            foreach (DataColumn col2 in t2.Columns)
-            {
-                insertRow[col2.ColumnName] = fromRow[col2.ColumnName];
-            }
-            result.Rows.Add(insertRow);
-        }
-    }
-    return result;
-}
+//*/
 
+//Start processing information
 
-var test = JoinDataTables(Gauges, GaugeReadings,
-               (row1, row2) =>
-               row1.Field<Int32>("Device ID") == row2.Field<Int32>("Device ID"));
-
-
-//get the latest timestamp
 
 DateTime last_reading_time;
 Double rainfall_average;
+Double rainfall_max;
+Double rainfall_latest;
 Boolean rainfall_increasing;
-Object calc_object; 
+Object calc_object;
 
+
+//get the latest timestamp
 last_reading_time = Convert.ToDateTime(GaugeReadings.Compute("max([Time])", string.Empty));
 
 //changed my mind on calcs. Just going to bash it out with excessive force.
@@ -188,7 +127,7 @@ foreach (DataRow gauge in Gauges.Rows)
     if (calc_object == "")
         rainfall_average = 0;
     else
-        //this is bonkers but I haven't done type conversion for decades, so what do I know
+        //this is bonkers but I haven't done forced type conversion for decades, so what do I know
         rainfall_average = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);
 
     if (rainfall_average < 10.0)
@@ -197,23 +136,53 @@ foreach (DataRow gauge in Gauges.Rows)
         Console.ForegroundColor = ConsoleColor.DarkYellow;
     else
         Console.ForegroundColor = ConsoleColor.Red;
-    
+
     //need to include a check for the >30mm outlier
+    calc_object = GaugeReadings.Compute("MAX([Rainfall])", $"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(-4)}#)").ToString();
+    if (calc_object == "")
+        rainfall_max = 0;
+    else
+        //this is bonkers but I haven't done type conversion for decades, so what do I know
+        rainfall_max = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);
+
+    if (rainfall_max > 30.0)
+        Console.ForegroundColor = ConsoleColor.Red;
 
     Console.Write(rainfall_average.ToString("F2"));
 
-//indicate increase/decrease
+    //indicate increase/decrease (Compare Last reading to average value)
+    DataRow[] select_results;
+    select_results = GaugeReadings.Select($"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(-4)}#)", "[Time] DESC");
+    if (select_results.Length == 0)
+        rainfall_latest = 0;
+        //there also won't be an average if there are no results in this time period. 
+        //possibly worth doing this first before the rest of the calcs, save some time
+    else
+        //this is bonkers but I haven't done type conversion for decades, so what do I know
+        rainfall_latest = Convert.ToDouble(select_results[0]["Rainfall"].ToString(), CultureInfo.InvariantCulture);
 
-//clean up the line
-Console.ResetColor();
-Console.WriteLine();
+    if (rainfall_latest > rainfall_average)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.Write(" Increasing");
+    }
+    else
+    {
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.Write(" Decreasing");
+    }
+
+    //clean up the line
+    Console.ResetColor();
+    Console.WriteLine();
 
 
 }
 
 
 
-Console.WriteLine(last_reading_time);
+Console.WriteLine();
+Console.WriteLine();
 
 
 
