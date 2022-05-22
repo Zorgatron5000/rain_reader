@@ -1,9 +1,8 @@
-﻿using System;
-using System.Reflection;
-using System.IO;
-using System.Data;
-using CsvHelper;
+﻿using System.Data;
 using System.Globalization;
+using utils;
+
+
 
 //constants
 const int PADDING_LABEL = 25;
@@ -68,42 +67,59 @@ GaugeReadings.Columns.Add("Time", typeof(DateTime));
 GaugeReadings.Columns.Add("Rainfall", typeof(Double));
 
 //import the ALL of the data (this could be a problem if they never delete old data)
-LoadFileIntoTable(FolderLocation + "\\Devices.csv", Gauges);
-
-data_files = Directory.GetFiles(FolderLocation, "Data*.csv");
-foreach (var df in data_files)
+if (Utils.LoadFileIntoTable(FolderLocation + "\\Devices.csv", Gauges))
 {
-    LoadFileIntoTable(df, GaugeReadings);
+    data_files = Directory.GetFiles(FolderLocation, "Data*.csv");
+    foreach (var df in data_files)
+    {
+        if (!Utils.LoadFileIntoTable(df, GaugeReadings))
+        { 
+            Console.WriteLine($"There was an error importing {df}, please check the file strucutre. Trying other files.");
+        }
+    }
 }
+else 
+{
+    Console.WriteLine("There was an error while importing Gauge information, please check the file structure.");
+    Environment.Exit(4);
+}
+
+/*  Checking data is actually in the tables debug only 
+
+OutputToScreen("Gauges", Gauges.Rows);
+OutputToScreen("Gauge Readings", GaugeReadings.Rows);
+
+//*/
 
 //Start processing information
 
-//get the latest timestamp
+//get the latest timestamp and write it to screen
 last_reading_time = Convert.ToDateTime(GaugeReadings.Compute("max([Time])", string.Empty));
+Console.WriteLine($"Last reading received at: {last_reading_time}");
+Console.WriteLine();
 
-//changed my mind on calcs. Just going to bash it out with excessive force.
+//now process the Gauges
 
-foreach (DataRow gauge in Gauges.Rows)
+foreach (DataRow g in Gauges.Rows)
 {
     Object calc_object;
     DataRow[] select_results;
     string id;
 
-    //enumerate name
-    id = gauge["Device ID"].ToString();
+     //enumerate name
+    id = g["Device ID"].ToString();
 
     Console.ForegroundColor = ConsoleColor.White;
-    Console.Write($"{gauge["Location"]} (#{id})".PadRight(PADDING_LABEL));
+    Console.Write($"{g["Location"]} (#{id})".PadRight(PADDING_LABEL));
+
 
     //calc average and make the colour changes as required.
-
     calc_object = GaugeReadings.Compute("AVG([Rainfall])", $"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(TIME_PERIOD_HOURS)}#)").ToString();
 
     if (calc_object == "")
         rainfall_average = 0;
     else
-        //this is bonkers but I haven't done forced type conversion for decades, so what do I know
-        rainfall_average = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);
+        rainfall_average = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);  //this is bonkers but I haven't done forced type conversion for decades, so what do I know
 
     if (rainfall_average < 10.0)
         Console.ForegroundColor = ConsoleColor.Green;
@@ -117,13 +133,13 @@ foreach (DataRow gauge in Gauges.Rows)
     if (calc_object == "")
         rainfall_max = 0;
     else
-        //this is bonkers but I haven't done type conversion for decades, so what do I know
-        rainfall_max = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);
+        rainfall_max = Convert.ToDouble(calc_object.ToString(), CultureInfo.InvariantCulture);      //this is bonkers but I haven't done forced type conversion for decades, so what do I know
 
     if (rainfall_max > 30.0)
         Console.ForegroundColor = ConsoleColor.Red;
 
     Console.Write(rainfall_average.ToString("F2").PadLeft(PADDING_AVG));
+
 
     //indicate increase/decrease (Compare Last reading to average value)
     select_results = GaugeReadings.Select($"(([device id] = {id})) and ([Time] > #{last_reading_time.AddHours(TIME_PERIOD_HOURS)}#)", "[Time] DESC");
@@ -132,7 +148,6 @@ foreach (DataRow gauge in Gauges.Rows)
         //there also won't be an average if there are no results in this time period. 
         //possibly worth doing this first before the rest of the calcs, save some time
     else
-        //this is bonkers but I haven't done type conversion for decades, so what do I know
         rainfall_latest = Convert.ToDouble(select_results[0]["Rainfall"].ToString(), CultureInfo.InvariantCulture);
 
     if (rainfall_latest > rainfall_average)
@@ -151,63 +166,13 @@ foreach (DataRow gauge in Gauges.Rows)
     Console.WriteLine();
 }
 
-//Disclaimer section (make it obvious when the last received reading was)
-Console.WriteLine();
-Console.WriteLine($"Last time stamp: {last_reading_time}");
-
 
 //end program
 
-bool LoadFileIntoTable(string filename, DataTable table)
-{
-    using (var reader = new StreamReader(filename))
-    {
-        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        {
-            // load the Guage info into the table
-            using (var dr = new CsvDataReader(csv))
-            {
-                try
-                {
-                    table.Load(dr);
-                    //this is such a cheat, should add some kind of error checking
-                    //need to filter out error values like blank lines. although current docs indicate that this is supposed to be the case but quick testing of loading the files indicates otherwise.
-                    //will need to check CsvHelper version specs against documentation. in the meantime I have removed the blank line in the Devices.txt file to skip the error condition.
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-        }
-    }
-}
 
 
 
 
-/*  Checking data is actually in the tables debug only 
-
-dump_results("Gauges", Gauges.Rows);
-dump_results("Gauge Readings", GaugeReadings.Rows);
-
-void dump_results(string title, DataRowCollection show_results)
-{
-    Console.WriteLine(title);
-    Console.WriteLine();
-
-    foreach (DataRow dataRow in show_results)
-    {
-        foreach (var item in dataRow.ItemArray)
-        {
-            Console.Write("{0}, ", item);
-        }
-        Console.WriteLine();
-    }
-}
-
-//*/
 
 
 
